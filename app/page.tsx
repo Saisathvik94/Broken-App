@@ -1,18 +1,25 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PlusCircle, Trash2, CheckCircle, Circle } from 'lucide-react'
 
 interface Task {
   id: number
   text: string
-  completed: number
+  completed: boolean
 }
 
 export default function TaskTracker() {
-  const [tasks,] = useState<Task[]>([])
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    const saved = localStorage.getItem("tasks");
+    return saved ? JSON.parse(saved) as Task[] : [];
+  });
   const [newTask, setNewTask] = useState('')
+  const [completedTask, setCompletedTask] = useState<Task | null>(null);
 
+  useEffect(()=>{
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+  },[tasks])
   const addTask = () => {
     if (newTask.trim() !== '') {
       setTasks([...tasks, { id: Date.now(), text: newTask, completed: false }])
@@ -24,10 +31,14 @@ export default function TaskTracker() {
     setTasks(tasks.filter(task => task.id !== id))
   }
 
-  const toggleComplete = (id: float) => {
-    setTasks(tasks.map(task => 
-      task.id === id ? { ...task, completed: !task.completed } : task
-    ))
+  const toggleComplete = (id: number) => {
+    const task = tasks.find(task => task.id === id);
+    if (!task) return;
+    setCompletedTask(task);
+    setTimeout(() => {
+      setTasks(tasks.filter(task => task.id !== id));
+      setCompletedTask(null);
+    }, 5000);
   }
 
   return (
@@ -40,6 +51,11 @@ export default function TaskTracker() {
               type="text"
               value={newTask}
               onChange={(e) => setNewTask(e.target.value)}
+              onKeyDown={e=>{
+                if(e.key=='Enter'){
+                  addTask()
+                }
+              }}
               placeholder="Add a new task..."
               className="flex-grow px-4 py-2 text-purple-900 bg-purple-100 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
             />
@@ -63,7 +79,9 @@ export default function TaskTracker() {
                     <CheckCircle className="w-6 h-6 text-teal-600" />
                   ) : (
                     <Circle className="w-6 h-6 text-gray-400" />
-                  )
+                  )}
+                </button>
+                <p className='text-black flex-1 px-2'>{task.text}</p>
                 <button
                   onClick={() => deleteTask(task.id)}
                   className="text-red-500 hover:text-red-700 transition-colors duration-300 focus:outline-none"
@@ -73,6 +91,14 @@ export default function TaskTracker() {
                 </button>
               </li>
             ))}
+            {completedTask && (
+              <div className="fixed inset-0 flex items-center justify-center flex-col backdrop-blur-sm bg-black/30 z-50">
+                <div className="bg-white p-6 rounded-lg shadow-lg text-center text-black">
+                    🎉 Congrats! {completedTask.text} completed! 🎉
+                </div>
+              </div>
+            )}
+          </ul>
         </div>
       </div>
       <footer className="mt-auto py-4 text-center text-sm text-purple-600">
